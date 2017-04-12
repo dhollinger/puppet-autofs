@@ -50,6 +50,10 @@ define autofs::mount (
   Array $mapcontents                      = [],
   Boolean $replace                        = true
 ) {
+  $require_type = $facts['os']['family'] ? {
+    'Solaris' => undef,
+    default   => Package['autofs'],
+  }
 
   if $mapfile {
     $contents = "${mount} ${mapfile} ${options}\n"
@@ -88,7 +92,7 @@ define autofs::mount (
       'owner'   => 'root',
       'group'   => 'root',
       'mode'    => '0755',
-      'require' => Package['autofs'],
+      'require' => $require_type,
     })
 
     if !defined(Concat::Fragment['autofs::fragment preamble map directory']) {
@@ -119,7 +123,7 @@ define autofs::mount (
       mode    => $mapperms,
       replace => $replace,
       content => template($maptempl),
-      require => Package[ 'autofs' ],
+      require => $require_type,
       notify  => Service[ 'autofs' ],
     }
   }
