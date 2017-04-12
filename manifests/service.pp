@@ -20,7 +20,7 @@ class autofs::service {
   assert_private('Service class is private, please use main class parameters.')
   $require_type = $facts['os']['family'] ? {
     'Solaris' => undef,
-    default   => 'Package['autofs']',
+    default   => Package['autofs'],
   }
   service { 'autofs':
     ensure     => $autofs::service_ensure,
