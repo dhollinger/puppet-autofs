@@ -63,6 +63,10 @@ define autofs::mount (
   Boolean $replace                        = true
 ) {
   include '::autofs'
+  $require_type = $facts['os']['family'] ? {
+    'Solaris'   => undef,
+    default => Package['autofs'],
+  }
 
   if $mapfile.is_a(Autofs::Mapentry) and $mapfile_manage {
     fail("Parameter 'mapfile_manage' must be false for complicated 'mapfile' ${mapfile}")
