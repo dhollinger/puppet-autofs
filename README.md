@@ -111,6 +111,28 @@ autofs::mounts:
     order: 01
 ```
 
+If you need to merge the `autofs::mounts` key from multiple files or hiera lookups, be sure to add the `lookup_options`
+key and set the merge behavior for `autofs::mounts` to `merge: hash`
+
+```yaml
+lookup_options:
+  autofs::mounts:
+    merge: hash
+autofs::mounts:
+  home:
+    mount: '/home'
+    mapfile: '/etc/auto.home'
+    mapcontents:
+      - '* -user,rw,soft,intr,rsize=32768,wsize=32768,tcp,nfsvers=3,noacl server.example.com:/path/to/home/shares'
+    options: '--timeout=120'
+    order: 01
+```
+
+For more information about merge behavior see the doc for:
+
+* [Lookup docs](https://docs.puppet.com/puppet/4.7/lookup_quick.html#puppet-lookup:-quick-reference-for-hiera-users) 
+* [Hiera 5 docs](https://docs.puppet.com/puppet/5.1/hiera_merging.html) if using Puppet >= 4.9
+
 ##### Direct Map `/-` arugment
 
 The autofs module also supports the use of the built in autofs `/-` argument used with Direct Maps.
@@ -172,6 +194,38 @@ autofs::mounts:
     use_dir: true
 ```
 
+#### Map Entries
+In addition to adding map entries via the `mapcontents` parameter to `autofs::mount the `autofs::map` type can also be used.
+
+##### Usage
+
+Define:
+```puppet
+autofs::map{'data':
+  map => '/etc/auto.data',
+  mapcontents => 'data -user,rw,soft server.example.com:/path/to/data,
+}
+```
+
+Hiera:
+```yaml
+autofs::maps:
+  data:
+    map: '/etc/auto.data'
+    mapcontent: 'data -user,rw server.example.com:/path/to/data'
+```
+
+It is assumed that the map file itself has already been defined with
+and `autofs::mount` first.
+
+```puppet
+autofs::mount{'auto.data':
+  mapfile => '/etc/auto.data',
+  mount   => '/big',
+}
+```
+
+
 ## Reference
 
 ### Classes
@@ -227,8 +281,9 @@ Default: `true`
 #### Public Defines
 
 * autofs::mount: Builds the autofs configuration.
+* autofs::map: Builds map entires for autofs configuration.
 
-### Parameters
+### Parameters for autofs::mount
 
 #### `mount_name`
 
@@ -243,15 +298,24 @@ Data type: Stblib::Absolutepath
 
 This Mapping describes where autofs will be mounting to. This map
 entry is referenced by concat as part of the generation of the /etc/auto.master
-file.
+file. Defaults to the `title` of the `autofs::mount`
 
 #### `mapfile`
 
-Data type: Stdlib::Absolutepath
+Data type: Stdlib::Absolutepath or Autofs::MapEntry
 
 This Mapping describes the name and path of the autofs map file.
 This mapping is used in the auto.master generation, as well as generating the map
 file from the auto.map.erb template. This parameter is no longer required.
+When anything other than a simple file path is used `mapfile_manage` must be false.
+
+#### `mapfile_manage`
+
+Data type: Boolean
+
+If true the the mapfile file will be created and maintained. Defaults
+to true. Set this to false when the map file is maintained some other way,
+e.g auto.smb from the autofs package.
 
 #### `mapcontents`
 
@@ -331,6 +395,23 @@ Data type: Boolean
 Whether or not to replace the mapfile if it already exists.
 
 Default: `true`
+
+### Parameters for autofs::map
+
+#### `mapfile`
+
+Data type: Stdlib::Absolutepath
+
+mapfile file to add entry to. e.g '/etc/auto.data'.
+
+#### `mapcontent`
+
+Data type: String
+
+This Mapping describes a folder that will be mounted, the
+mount options, and the path to the remote or local share to be mounted. Used in
+mapfile generation. e.g. 'data -rw nfs.example.org:/data/big
+
 
 Limitations
 ------------
